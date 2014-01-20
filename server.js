@@ -80,7 +80,38 @@ app.post('/add', function (req, res) {
     lobbySocket.emit('gameAdded', Game.list());
 });
 app.get('/gamebyid', function (req, res) { res.json(Game.getGame(req.query.id)); });
+app.post('/spectategame', function (req, res) {
+  var game = Game.getGame(req.body.gameId);
+  if(!game) {
+    res.writeHead(500, { 'Content-Type': 'application/json' });
+    res.write(JSON.stringify({ error: "invalid GameId" }));
+    res.end();
+    return null;
+  }
 
+  game = Game.spectateGame(game, { id: req.body.playerId });
+  returnGame(req.body.gameId, res);
+  //lobbySocket.emit('gameAdded', Game.list());
+});
+app.post('/startgame', function (req, res) {
+    var game = Game.getGame(req.body.gameId);
+    if(!game) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.write(JSON.stringify({ error: "invalid GameId" }));
+      res.end();
+      return null;
+    }
+    if(game.isStarted) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.write(JSON.stringify({ error: "game already started" }));
+      res.end();
+      return null;
+    }
+    game = Game.startGame(game);
+    lobbySocket.emit('gameStarted', Game.list());
+    broadcastGame(req.body.gameId);
+    returnGame(req.body.gameId, res);
+});
 app.post('/joingame', function (req, res) {
   var game = Game.getGame(req.body.gameId);
   if(!game) {
@@ -90,14 +121,14 @@ app.post('/joingame', function (req, res) {
     return null;
   }
 
-  if(game.isStarted || game.players.length >= 4) {
+  if(game.isStarted) {
     res.writeHead(500, { 'Content-Type': 'application/json' });
-    res.write(JSON.stringify({ error: "too many players" }));
+    res.write(JSON.stringify({ error: "game already started" }));
     res.end();
     return null;
   }
 
-  game = Game.joinGame(game, { id: req.body.playerId, name: req.body.playerName });
+  game = Game.joinGame(game, { id: req.body.playerId, name: req.body.playerName, hostId:req.body.hostId });
   returnGame(req.body.gameId, res);
   lobbySocket.emit('gameAdded', Game.list());
 });
@@ -115,7 +146,7 @@ app.post('/selectcard', function(req, res) {
 });
 
 app.post('/selectWinner', function(req, res) {
-  Game.selectWinner(req.body.gameId, req.body.cardId);
+  Game.selectWinner(req.body.gameId, req.body.cards);
   broadcastGame(req.body.gameId);
   returnGame(req.body.gameId, res);
 });

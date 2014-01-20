@@ -3,6 +3,18 @@ var cards = require('./cards.js');
 
 var gameList = [];
 
+Array.prototype.compare = function(arr) {
+    if (this.length != arr.length) return false;
+    for (var i = 0; i < arr.length; i++) {
+        if (this[i].compare) { 
+            if (!this[i].compare(arr[i])) return false;
+        }
+        if (this[i] !== arr[i]) return false;
+    }
+    return true;
+}
+
+
 function getDeck() {
   return cards.getDeck();
 }
@@ -15,9 +27,7 @@ function removeFromArray(array, item) {
 }
 
 function list() {
-  return toInfo(_.filter(gameList, function(x) {
-    return x.players.length < 4 && !x.isStarted
-  }));
+  return toInfo(gameList);
 }
 
 function listAll() {
@@ -26,16 +36,17 @@ function listAll() {
 
 function toInfo(fullGameList) {
   return _.map(fullGameList, function(game) {
-    return { id: game.id, name: game.name, players: game.players.length };
+    return { id: game.id, name: game.name, players: game.players.length, hostId: game.hostId };
   });
 }
 
 function addGame(game) {
   game.players = [];
+  game.spectators = [];
   game.history = [];
   game.isOver = false;
   game.winnerId = null;
-  game.winningCardId = null;
+  game.winningCards = null;
   game.isStarted = false;
   game.deck = getDeck();
   game.currentBlackCard = "";
@@ -49,14 +60,29 @@ function addGame(game) {
 function getGame(gameId) {
     return _.find(gameList, function(x) { return x.id === gameId; }) || undefined;
 }
+function spectateGame(game, player) {
+    var joiningPlayer = {
+    id: player.id,
+    isReady: false,
+    isSpectator: false,
+    cards : [],
+    selectedWhiteCards: [],
+    awesomePoints: 0,
+    isCzar: false,
+    isSpectator: true
+    };
+    game.spectators.push(joiningPlayer);
 
+    return game;
+}
 function joinGame(game, player) {
     var joiningPlayer = {
     id: player.id,
     name: player.name,
     isReady: false,
+    isSpectator: false,
     cards : [],
-    selectedWhiteCardId: null,
+    selectedWhiteCards: [],
     awesomePoints: 0,
     isCzar: false
     };
@@ -67,17 +93,13 @@ function joinGame(game, player) {
 
     game.players.push(joiningPlayer);
 
-    if(game.players.length === 4) {
-        if(!game.isStarted){
-            startGame(game);
-        } else {
-            //someone may have dropped and rejoined. If it was the Czar, we need to re-elect the re-joining player
-            var currentCzar = _.find(game.players, function(p) {
-                return p.isCzar == true;
-            });
-            if(!currentCzar){
-                game.players[game.players.length - 1].isCzar = true;
-            }
+    if(game.isStarted){
+        //someone may have dropped and rejoined. If it was the Czar, we need to re-elect the re-joining player
+        var currentCzar = _.find(game.players, function(p) {
+            return p.isCzar == true;
+        });
+        if(!currentCzar){
+            game.players[game.players.length - 1].isCzar = true;
         }
     }
 
@@ -95,19 +117,22 @@ function departGame(gameId, playerId) {
         if(game.players.length === 0){
             //kill the game
             removeFromArray(gameList, game);
+        } else {
+          game.hostId = game.players[0].id;
         }
     }
 }
 
 function startGame(game) {
   game.isStarted = true;
+  game.roundCounter = 1;
   setCurrentBlackCard(game);
   game.players[0].isCzar = true;
 }
 
 function roundEnded(game) {
   game.winnerId = null;
-  game.winningCardId = null;
+  game.winningCards = null;
   game.isReadyForScoring = false;
   game.isReadyForReview = false;
 
@@ -115,40 +140,26 @@ function roundEnded(game) {
 
   _.each(game.players, function(player) {
     if(!player.isCzar) {
-      removeFromArray(player.cards, player.selectedWhiteCardId);
+      removeFromArray(player.cards, player.selectedWhiteCards);
       drawWhiteCard(game, player);
     }
 
     player.isReady = false;
-    player.selectedWhiteCardId = null;
+    player.selectedWhiteCards = [];
   });
 
-  if(game.players[0].isCzar === true) {
-    game.players[0].isCzar = false;
-    game.players[1].isCzar = true;
-    game.players[1].isReady = false;
+  game.players[game.roundCounter % game.players.length ].isCzar = false;
+  game.players[(game.roundCounter + 1) % game.players.length].isCzar = true;
+  game.players[(game.roundCounter + 1) % game.players.length].isReady = false;
+
+  game.roundCounter += game.roundCounter;
+
+  if(game.isOver){
+      _.map(game.players, function(p) {
+          p.awesomePoints = 0;
+      });
+      game.isOver = false;
   }
-  else if(game.players[1].isCzar === true) {
-    game.players[1].isCzar = false;
-    game.players[2].isCzar = true;
-    game.players[2].isReady = false;
-  }
-  else if(game.players[2].isCzar === true) {
-    game.players[2].isCzar = false;
-    game.players[3].isCzar = true;
-    game.players[3].isReady = false;
-  }
-  else if(game.players[3].isCzar === true) {
-    game.players[3].isCzar = false;
-    game.players[0].isCzar = true;
-    game.players[0].isReady = false;
-  }
-    if(game.isOver){
-        _.map(game.players, function(p) {
-            p.awesomePoints = 0;
-        });
-        game.isOver = false;
-    }
 }
 
 function drawWhiteCard(game, player) {
@@ -158,8 +169,9 @@ function drawWhiteCard(game, player) {
 }
 
 function setCurrentBlackCard(game) {
-  var index = Math.floor(Math.random() * game.deck.black.length);
-  game.currentBlackCard = game.deck.black[index];
+  var index =  0;//Math.floor(Math.random() * game.deck.black.length);
+  game.currentBlackCard = (game.deck.black[index].q !== undefined) ? game.deck.black[index].q : game.deck.black[index];
+  game.currentBlackCardPick = (game.deck.black[index].pick !== undefined) ? game.deck.black[index].pick : 1;
   game.deck.black.splice(index, 1);
 }
 
@@ -168,9 +180,9 @@ function getPlayer(gameId, playerId) {
   return _.find(game.players, function(x) { return x.id === playerId; });
 }
 
-function getPlayerByCardId(gameId, cardId) {
+function getPlayerByCards(gameId, cards) {
   var game = getGame(gameId);
-  return _.findWhere(game.players, { selectedWhiteCardId: cardId });
+  return _.find(game.players, function(player){ return player.selectedWhiteCards.compare(cards); });
 }
 
 function readyForNextRound(gameId, playerId) {
@@ -189,27 +201,26 @@ function readyForNextRound(gameId, playerId) {
 
 function selectCard(gameId, playerId, whiteCardId) {
   var player = getPlayer(gameId, playerId);
-  player.selectedWhiteCardId = whiteCardId;
+  var game = getGame(gameId);
+  player.selectedWhiteCards.push(whiteCardId);
   player.isReady = false;
 
-  var game = getGame(gameId);
-
   var readyPlayers = _.filter(game.players, function (x) {
-    return x.selectedWhiteCardId;
+    return x.selectedWhiteCards.length === game.currentBlackCardPick ;
   });
 
-  if(readyPlayers.length === 3) {
+  if(readyPlayers.length === game.players.length - 1) {
     game.isReadyForScoring = true;
   }
 }
 
-function selectWinner(gameId, cardId) {
-  var player = getPlayerByCardId(gameId, cardId);
+function selectWinner(gameId, cards) {
+  var player = getPlayerByCards(gameId, cards);
   var game = getGame(gameId);
-  game.winningCardId = cardId;
+  game.winningCards = cards;
   game.isReadyForReview = true;
   player.awesomePoints = player.awesomePoints + 1;
-  game.history.push({ black: game.currentBlackCard, white: cardId, winner: player.name });
+  game.history.push({ black: game.currentBlackCard, white: cards, winner: player.name });
   if(player.awesomePoints === game.pointsToWin) {
     game = getGame(gameId);
     game.isOver = true;
@@ -223,10 +234,12 @@ function reset(){
 
 exports.list = list;
 exports.listAll = listAll;
+exports.startGame = startGame;
 exports.addGame = addGame;
 exports.getGame = getGame;
 exports.getPlayer = getPlayer;
 exports.joinGame = joinGame;
+exports.spectateGame = spectateGame;
 exports.departGame = departGame;
 exports.readyForNextRound = readyForNextRound;
 exports.reset = reset;

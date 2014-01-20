@@ -4,10 +4,10 @@
   </div>
 </div>
 <div class="row">
-  <h1 id="gameName">{{game.name}} <small ng-show="!game.isStarted">(waiting for players)</small></h1>
+  <h1 id="gameName">{{game.name}}</h1>
   <hr/>
 </div>
-<div id="notificationWaitingOnRound" ng-show="!game.isStarted" class="center row alert alert-warning">waiting on round to start</div>
+<!--<div id="notificationWaitingOnRound" ng-show="!game.isStarted" class="center row alert alert-warning">waiting on round to start</div>-->
 <div class="row blackCard" ng-show="game.isStarted">
   {{game.currentBlackCard}}
 </div>
@@ -32,21 +32,25 @@
 <div class="row" ng-show="showSelectedWhiteCardList()">
   <table id="selectedWhiteCards" class="table">
     <tbody>
-      <tr ng-repeat="player in game.players | filter:whiteCardNonNull" ng-class="getWinningCardClass(player.selectedWhiteCardId)">
+      <tr ng-repeat="player in game.players | filter:whiteCardNonNull" ng-class="getWinningCardClass(player.selectedWhiteCards)">
         <td>
-          <button class="btn btn-default" ng-show="!game.isReadyForReview" ng-click="selectWinner(player.selectedWhiteCardId)">select</button>
+          <button class="btn btn-default" ng-show="!game.isReadyForReview" ng-click="selectWinner(player.selectedWhiteCards)">select</button>
           <span ng-show="game.isReadyForReview">{{player.name}}</span>
         </td>
-        <td class="col-lg-10 col-md-10" style="font-size: 16px; font-weight: bold; line-height: 25px;"><span ng-show="game.winningCardId === player.selectedWhiteCardId">Winner: &nbsp;</span>{{player.selectedWhiteCardId}}</td>
+        <td class="col-lg-10 col-md-10" style="font-size: 16px; font-weight: bold; line-height: 25px;"><span ng-show="game.winningCards === player.selectedWhiteCards">Winner: &nbsp;</span>{{player.selectedWhiteCards}}</td>
       </tr>
     </tbody>
   </table>
 </div>
 <div id="notificationRoundComplete" ng-show="game.isReadyForReview" class="row alert alert-info center">winner selected, next round will start when everyone is ready</div>
+<div id="buttonNextRound" ng-show="!game.isStarted && game.hostId === currentPlayer.id" class="row">
+  <button ng-click="startGame()" class="btn btn-lg btn-primary btn-block">start game</button>
+</div>
 <div id="buttonNextRound" ng-show="game.isReadyForReview && !currentPlayer.isReady" class="row">
   <button ng-click="readyForNextRound()" ng-show="!game.isOver" class="btn btn-lg btn-primary btn-block">ready</button>
   <button ng-click="readyForNextRound()" ng-show="game.isOver" class="btn btn-lg btn-primary btn-block">start new game</button>
 </div>
+<!--
 <div class="row">
   <h4>Round Progress</h4>
   <div class="progress">
@@ -58,11 +62,12 @@
     </tbody>
   </table>
 </div>
-<div id="points" class="row">
+-->
+<div id="points" class="row" ng-show="game.isStarted">
   <div class="well" style="font-size: 20px">Your Awesome Score: <span id="pointsValue">{{currentPlayer.awesomePoints}}</span></div>
 </div>
 <div id="roundPlayers" class="row"> </div>
-<h4>Player Status</h4>
+<h4>Players</h4>
 <div id="roundHistory" class="row">
   <ul class="list-group">
     <li class="list-group-item" ng-repeat="player in game.players">
@@ -72,12 +77,14 @@
     </li>
   </ul>
 </div>
-<h4>Round Winners</h4>
-<div id="rountWinners" class="row">
-  <ul class="list-group">
-    <li class="list-group-item" ng-repeat="item in game.history">
-    <span class="text-success">{{item.winner}}:&nbsp;</span>
-    <span ng-bind-html="buildWinningText(item)"></span>
-    </li>
-  </ul>
+<div ng-show="game.isStarted">
+  <h4>Round Winners</h4>
+  <div id="rountWinners" class="row">
+    <ul class="list-group">
+      <li class="list-group-item" ng-repeat="item in game.history">
+      <span class="text-success">{{item.winner}}:&nbsp;</span>
+      <span ng-bind-html="buildWinningText(item)"></span>
+      </li>
+    </ul>
+  </div>
 </div>

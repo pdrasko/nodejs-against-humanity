@@ -28,10 +28,16 @@ angular.module('myApp.services', []).
                 }
             },
             getGames: function() {
-                return $http.get('/list');
+                return $http.get('/listall');
+            },
+            startGame: function(gameId) {
+                return $http.post('/startgame', { gameId: gameId });
             },
             createGame: function() {
-                return $http.post('/add', { id: guid(), name: this.playerName + "'s game" });
+                return $http.post('/add', { id: guid(), name: this.playerName + "'s game", hostId: this.playerId });
+            },
+            spectateGame: function(gameId, playerId) {
+                return $http.post("/spectategame", { gameId: gameId, playerId: playerId});
             },
             joinGame: function(gameId, playerId, name) {
                 return $http.post("/joingame", { gameId: gameId, playerId: playerId, playerName: name });
@@ -42,8 +48,8 @@ angular.module('myApp.services', []).
             selectCard: function(gameId, playerId, selectedCard){
                 $http.post("/selectCard", { gameId: gameId, playerId: playerId, whiteCardId: selectedCard });
             },
-            selectWinner: function(gameId, selectedCard) {
-                $http.post("/selectWinner", { gameId: gameId, cardId: selectedCard });
+            selectWinner: function(gameId, selectedCards) {
+                $http.post("/selectWinner", { gameId: gameId, cards: selectedCards });
             },
             readyForNextRound: function(gameId, playerId) {
                 $http.post("readyForNextRound",  { playerId: playerId, gameId: gameId });

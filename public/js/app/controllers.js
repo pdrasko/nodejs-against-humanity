@@ -20,7 +20,7 @@ angular.module('myApp.controllers', [])
                 .then(function(success) {
                     //navigate to the new game
                     console.info(success);
-                    $scope.joinGame(success.data.id);
+                    $scope.joinGame(success.data.id, true);
                 }, handleError);
         };
 
@@ -28,6 +28,11 @@ angular.module('myApp.controllers', [])
             console.info('joinGame called for gameId ' + gameId);
             GameService.initName();
             $location.url("/game/"+ gameId + "/pId/" + GameService.playerId + "/name/" + GameService.playerName);
+        };
+
+        $scope.spectateGame = function(gameId) {
+            console.info('spectateGame called for gameId ' + gameId);
+            $location.url("/game/"+ gameId + "/pId/" + GameService.playerId + "/spectate");
         };
 
         $scope.$on('enterLobby', function() {
@@ -50,13 +55,12 @@ angular.module('myApp.controllers', [])
         $scope.gameId = $routeParams.gameId;
         $scope.playerId = $routeParams.playerId;
         $scope.gameError;
-
         GameService.playerName = $routeParams.playerName;
 
         //ng-show helper functions
         $scope.showNotificationSelectCard = function() {
             return !$scope.currentPlayer.isCzar &&
-                !$scope.currentPlayer.selectedWhiteCardId &&
+                !$scope.currentPlayer.selectedWhiteCards &&
                 $scope.game.isStarted &&
                 !$scope.game.isReadyForScoring
         };
@@ -68,7 +72,7 @@ angular.module('myApp.controllers', [])
         };
 
         $scope.showNotificationWaitingOnCards = function() {
-            return ($scope.currentPlayer.isCzar || $scope.currentPlayer.selectedWhiteCardId) &&
+            return ($scope.currentPlayer.isCzar || $scope.currentPlayer.selectedWhiteCards) &&
                 !$scope.game.isReadyForScoring
         };
 
@@ -83,7 +87,7 @@ angular.module('myApp.controllers', [])
         };
 
         $scope.showSelectedWhiteCardList = function() {
-            return ($scope.currentPlayer.isCzar && $scope.game.isStarted && $scope.game.isReadyForScoring) ||
+            return (($scope.currentPlayer.isCzar || $scope.currentPlayer.isSpectator) && $scope.game.isStarted && $scope.game.isReadyForScoring) ||
                 $scope.game.isReadyForReview
         };
         //end ng-show helper functions
@@ -100,7 +104,7 @@ angular.module('myApp.controllers', [])
         };
 
         $scope.whiteCardNonNull = function(item) {
-            return item.selectedWhiteCardId != undefined;
+            return item.selectedWhiteCards != [];
         }
 
         $scope.getPlayerStatus = function(player) {
@@ -111,9 +115,9 @@ angular.module('myApp.controllers', [])
             else if(!$scope.game.isReadyForReview && !$scope.game.isReadyForScoring) {
                 if(player.isCzar) {
                     status = "card czar";
-                } else if(!player.selectedWhiteCardId) {
+                } else if(player.selectedWhiteCards.length < $scope.game.currentBlackCardPick) {
                     status = "selecting card";
-                } else if(player.selectedWhiteCardId) {
+                } else if(player.selectedWhiteCards.length === $scope.game.currentBlackCardPick) {
                     status = "card selected";
                 }
             }
@@ -143,27 +147,32 @@ angular.module('myApp.controllers', [])
         };
 
         $scope.getButtonClass = function(card) {
-            if(card === $scope.currentPlayer.selectedWhiteCardId) {
+            if($scope.currentPlayer.selectedWhiteCards.indexOf(card) == -1) {
                 return 'btn btn-primary'
             } else {
                 return 'btn btn-default'
             }
         };
-
         $scope.getButtonText = function(card) {
-            if(card === $scope.currentPlayer.selectedWhiteCardId) {
-                return 'selected'
-            } else {
+            if(  $scope.currentPlayer.selectedWhiteCards.indexOf(card) == -1) {
                 return 'select'
+            } else {
+                if($scope.game.currentBlackCardPick === 1){
+                    return 'deselect'
+                }   else {
+                    var selectionTxt = ["first", "second", "third"];
+                    return selectionTxt[$scope.currentPlayer.selectedWhiteCards.indexOf(card)]
+                }
+                
             }
         };
 
-        $scope.selectWinner = function(card) {
-            GameService.selectWinner($scope.gameId, card);
+        $scope.selectWinner = function(cards) {
+            GameService.selectWinner($scope.gameId, cards);
         };
 
         $scope.getWinningCardClass = function(card) {
-            if(card === $scope.game.winningCardId){
+            if(card === $scope.game.winningCards){
                 return 'alert alert-success'
             } else {
                 return ''
@@ -173,11 +182,14 @@ angular.module('myApp.controllers', [])
         $scope.readyForNextRound = function() {
             GameService.readyForNextRound($scope.gameId, $scope.playerId);
         };
-
+        $scope.startGame = function() {
+            console.info($scope);
+            GameService.startGame($scope.gameId);
+        };
         function setProgStyle() {
             if($scope.game){
                 var playersWaiting = _.reduce($scope.game.players, function(total, player) {
-                    if(player.selectedWhiteCardId){return total + 1}
+                    if(player.selectedWhiteCards){return total + 1}
                     else{ return total}
                 }, 0);
                 //this extra addition brings the progress bar to 100% when the game is ready for review
@@ -193,6 +205,11 @@ angular.module('myApp.controllers', [])
             $scope.currentPlayer = _.find(game.players, function(p) {
                 return p.id === $scope.playerId;
             });
+            if(!$scope.currentPlayer){
+                $scope.currentPlayer = _.find(game.spectators, function(p) {
+                    return p.id === $scope.playerId;
+                });
+            }
             setProgStyle();
         };
 
@@ -208,7 +225,6 @@ angular.module('myApp.controllers', [])
 
             socket.on('updateGame', function(game) {
                 console.info('updateGame');
-                console.info(game);
                 renderGame(game);
                 $scope.$apply();
             });
@@ -218,7 +234,16 @@ angular.module('myApp.controllers', [])
                 $scope.$apply();
             });
         }
-
+        function spectateGame() {
+            GameService.spectateGame($routeParams.gameId, $routeParams.playerId)
+                .then(function(success) {
+                    renderGame(success.data);
+                    initSocket();
+                },
+              function(error) {
+                $scope.gameError = error.data.error;
+              });
+        };
         function joinGame() {
             GameService.joinGame($routeParams.gameId, $routeParams.playerId, $routeParams.playerName)
                 .then(function(success) {
@@ -229,8 +254,11 @@ angular.module('myApp.controllers', [])
                 $scope.gameError = error.data.error;
               });
         };
-
-        joinGame();
+        if($routeParams.playerName === undefined){
+            spectateGame();
+        }   else {
+            joinGame();
+        }
         //initSocket();
         $scope.$emit('enterGame');
 
@@ -275,7 +303,6 @@ angular.module('myApp.controllers', [])
 
             socket.on('gameAdded', function(gameList) {
                 console.info('gameAdded');
-                console.info(gameList);
                 $scope.availableGames = gameList;
                 $scope.$apply();
             });
