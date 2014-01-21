@@ -225,12 +225,10 @@ function selectCard(gameId, playerId, whiteCardId) {
   var player = getPlayer(gameId, playerId);
   var game = getGame(gameId);
   player.selectedWhiteCards.push(whiteCardId);
-  player.isReady = false;
-
+  player.isReady = (player.selectedWhiteCards.length >= game.currentBlackCardPick) ? true : false;
   var readyPlayers = _.filter(game.players, function (x) {
-    return x.selectedWhiteCards.length === game.currentBlackCardPick ;
+    return x.selectedWhiteCards.length >= game.currentBlackCardPick ;
   });
-
   if(readyPlayers.length === game.players.length - 1) {
     game.isReadyForScoring = true;
   }

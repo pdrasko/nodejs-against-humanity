@@ -83,7 +83,8 @@ angular.module('myApp.controllers', [])
         };
 
         $scope.showWhiteCardList = function() {
-            return !$scope.currentPlayer.isCzar && $scope.game.isStarted && !$scope.game.isReadyForScoring
+            console.info($scope);
+            return !$scope.currentPlayer.isCzar && $scope.game.isStarted && !$scope.game.isReadyForScoring && !$scope.currentPlayer.isReady
         };
 
         $scope.showSelectedWhiteCardList = function() {
@@ -146,7 +147,9 @@ angular.module('myApp.controllers', [])
         }
 
         $scope.selectCard = function(card) {
-            GameService.selectCard($scope.gameId, $scope.playerId, card);
+            if($scope.currentPlayer.selectedWhiteCards.indexOf(card) == -1){
+                GameService.selectCard($scope.gameId, $scope.playerId, card);
+            }
         };
 
         $scope.getButtonClass = function(card) {
@@ -157,16 +160,15 @@ angular.module('myApp.controllers', [])
             }
         };
         $scope.getButtonText = function(card) {
-            if(  $scope.currentPlayer.selectedWhiteCards.indexOf(card) == -1) {
-                return 'select'
-            } else {
+            if(  $scope.currentPlayer.selectedWhiteCards.indexOf(card) >= 0) {
                 if($scope.game.currentBlackCardPick === 1){
                     return 'deselect'
                 }   else {
                     var selectionTxt = ["first", "second", "third"];
                     return selectionTxt[$scope.currentPlayer.selectedWhiteCards.indexOf(card)]
                 }
-                
+            } else {
+                return 'select'
             }
         };
 
