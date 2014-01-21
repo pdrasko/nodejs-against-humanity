@@ -8,6 +8,12 @@
   text-align: center;
   border-radius: 5px;
 }
+.whiteCard{
+    border-radius: 5px;
+    border-color: #2c2c2c;
+    border-width: thin;
+    border-style: solid;
+}
 
 .test1 {background-color: #269abc;}
 .test2 {background-color: #3c763d}
@@ -16,6 +22,7 @@
   border-top: darkgray solid 3px;
   padding-top: 5px;
   padding-bottom: 5px;
+  padding-right: 10px;
 }
 
 .alert {

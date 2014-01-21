@@ -37,7 +37,7 @@
           <button class="btn btn-default" ng-show="!game.isReadyForReview" ng-click="selectWinner(player.selectedWhiteCards)">select</button>
           <span ng-show="game.isReadyForReview">{{player.name}}</span>
         </td>
-        <td class="col-lg-10 col-md-10" style="font-size: 16px; font-weight: bold; line-height: 25px;"><span ng-show="game.winningCards === player.selectedWhiteCards">Winner: &nbsp;</span>{{player.selectedWhiteCards}}</td>
+        <td class="col-lg-10 col-md-10" style="font-size: 16px; font-weight: bold; line-height: 25px;"><span ng-show="game.winningCards === player.selectedWhiteCards">Winner: &nbsp;</span><span class="col-sm-3 whiteCard " ng-repeat="card in player.selectedWhiteCards">{{card}}</span></td>
       </tr>
     </tbody>
   </table>

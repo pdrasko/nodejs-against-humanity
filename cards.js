@@ -4,7 +4,8 @@ function getDeck() {
 
 function black() {
   return [
-    {q:"A romantic candlelit dinner would be incomplete without __________.", pick: 2},
+    {q: "This is a __________ ; __________ and __________.", draw: 3},
+    {q:"A romantic candlelit dinner would be incomplete without __________."},
     "After Hurricane Katrina, Sean Penn brought __________ to the people of New Orleans.",
     "After the earthquake, Sean Penn brought __________ to the people of Haiti.",
     "Alternative medicine is now embracing the curative powers of __________.",

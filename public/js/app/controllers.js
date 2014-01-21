@@ -94,17 +94,20 @@ angular.module('myApp.controllers', [])
 
         $scope.buildWinningText = function(history) {
             var text = history.black;
-
+            var count = 0;
             if(text.indexOf("__________") != -1) {
-                text = text.replace("__________", "<b>" + history.white + "</b>");
+                while(text.indexOf("__________") != -1) {
+                    text = text.replace("__________", "<b>" + history.white[count] + "</b>");
+                    count++;
+                }
             } else {
-                text = text + " <b>" + history.white + "</b>"
+                text = text + " <b>" + history.white[0] + "</b>"
             }
             return text
         };
 
         $scope.whiteCardNonNull = function(item) {
-            return item.selectedWhiteCards != [];
+            return item.selectedWhiteCards.length > 0;
         }
 
         $scope.getPlayerStatus = function(player) {

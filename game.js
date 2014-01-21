@@ -19,7 +19,16 @@ function getDeck() {
   return cards.getDeck();
 }
 
-function removeFromArray(array, item) {
+function removeFromArray(array, obj) {
+  if(typeof obj === "object"){
+    for(var i = 0; i < obj.length; i ++ ){
+      removeFromArrayItem(array, obj[i]);
+    }
+  } else {
+    removeFromArrayItem(array, obj);
+  }
+}
+function removeFromArrayItem(array, item){
   var index = array.indexOf(item);
   if(index !== -1) {
     array.splice(index, 1);
@@ -36,7 +45,7 @@ function listAll() {
 
 function toInfo(fullGameList) {
   return _.map(fullGameList, function(game) {
-    return { id: game.id, name: game.name, players: game.players.length, hostId: game.hostId };
+    return { id: game.id, name: game.name, isStarted: game.isStarted , players: game.players.length, hostId: game.hostId };
   });
 }
 
@@ -53,6 +62,7 @@ function addGame(game) {
   game.isReadyForScoring = false;
   game.isReadyForReview = false;
   game.pointsToWin = 5;
+  game.roundCounter = 0;
   gameList.push(game);
   return game;
 }
@@ -128,6 +138,15 @@ function startGame(game) {
   game.roundCounter = 1;
   setCurrentBlackCard(game);
   game.players[0].isCzar = true;
+  if(game.currentBlackCardDraw > 1){
+    _.each(game.players, function(player) {
+      var count = 1;
+      while(!player.isCzar && count < game.currentBlackCardDraw ) {
+        drawWhiteCard(game, player);
+        count++;
+      }
+    });
+  }
 }
 
 function roundEnded(game) {
@@ -139,18 +158,20 @@ function roundEnded(game) {
   setCurrentBlackCard(game);
 
   _.each(game.players, function(player) {
-    if(!player.isCzar) {
+    var count = 0;
+    while(!player.isCzar && count < game.currentBlackCardDraw ) {
       removeFromArray(player.cards, player.selectedWhiteCards);
       drawWhiteCard(game, player);
+      count++;
     }
 
     player.isReady = false;
     player.selectedWhiteCards = [];
   });
 
-  game.players[game.roundCounter % game.players.length ].isCzar = false;
-  game.players[(game.roundCounter + 1) % game.players.length].isCzar = true;
-  game.players[(game.roundCounter + 1) % game.players.length].isReady = false;
+  game.players[(game.roundCounter - 1) % game.players.length ].isCzar = false;
+  game.players[(game.roundCounter ) % game.players.length].isCzar = true;
+  game.players[(game.roundCounter ) % game.players.length].isReady = false;
 
   game.roundCounter += game.roundCounter;
 
@@ -171,7 +192,8 @@ function drawWhiteCard(game, player) {
 function setCurrentBlackCard(game) {
   var index =  0;//Math.floor(Math.random() * game.deck.black.length);
   game.currentBlackCard = (game.deck.black[index].q !== undefined) ? game.deck.black[index].q : game.deck.black[index];
-  game.currentBlackCardPick = (game.deck.black[index].pick !== undefined) ? game.deck.black[index].pick : 1;
+  game.currentBlackCardDraw = (game.deck.black[index].draw !== undefined) ? game.deck.black[index].draw : 1;
+  game.currentBlackCardPick = Math.max(game.currentBlackCard.split("__________").length - 1, 1) ;
   game.deck.black.splice(index, 1);
 }
 
