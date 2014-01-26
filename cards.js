@@ -80,7 +80,7 @@ function black() {
     {question:"MTV's new reality show features eight washed-up celebrities living with _____."},
     {question:"My country, 'tis of thee, sweet land of _____."},
     {question:"My gym teacher got fired for adding _____ to the obstacle course."},
-    {question:"My new favorite porn star is Joey "_____" McGee."},
+    {question:"My new favorite porn star is Joey '_____' McGee."},
     {question:"Next from J.K. Rowling: Harry Potter and the Chamber of _____."},
     {question:"Next on ESPN2, the World Series of _____."},
     {question:"Next time on Dr. Phil: How to talk to your child about _____."},
