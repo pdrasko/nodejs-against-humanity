@@ -1,4 +1,5 @@
 var express = require('express');
+require('mongoose').connect('mongodb://localhost/cah');
 var app = express();
 var server = require('http').createServer(app);
 var Game = require('./game.js');
@@ -6,6 +7,7 @@ var routes = require('./routes/routes.js');
 var players = { };
 var io = require('socket.io').listen(server);
 var socketCount = 0;
+var cards = require('./cards.js');
 
 server.listen(process.env.PORT || 3000);
 
@@ -75,9 +77,10 @@ app.get('/views/*', routes.partials);
 app.get('/list', function (req, res) { res.json(Game.list()); });
 app.get('/listall', function (req, res) { res.json(Game.listAll()); });
 app.post('/add', function (req, res) {
-    var newGame = Game.addGame(req.body);
-    res.json(newGame);
-    lobbySocket.emit('gameAdded', Game.list());
+    Game.addGame(req.body, function(newGame){
+      res.json(newGame);
+      lobbySocket.emit('gameAdded', Game.list());
+    });
 });
 app.get('/gamebyid', function (req, res) { res.json(Game.getGame(req.query.id)); });
 app.post('/spectategame', function (req, res) {

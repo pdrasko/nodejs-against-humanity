@@ -22,9 +22,9 @@
     "redis": "~0.8.4",
     "redis-url": "0.1.0",
     "request": "~2.27.0",
-    "mongodb": "*"
+    "mongoose": "3.6.x",
+    "mongoose-timestamp": "0.1.x"
   },
-  "subdomain": "nah-amir-rajan",
   "engines": {
     "node": "0.10.x"
   }

@@ -1,6 +1,7 @@
 var _ = require('underscore');
-var cards = require('./cards.js');
 
+var WhiteCard = require('./models/WhiteCard.js');
+var BlackCard = require('./models/BlackCard.js');
 var gameList = [];
 
 Array.prototype.compare = function(arr) {
@@ -12,11 +13,6 @@ Array.prototype.compare = function(arr) {
         if (this[i] !== arr[i]) return false;
     }
     return true;
-}
-
-
-function getDeck() {
-  return cards.getDeck();
 }
 
 function removeFromArray(array, obj) {
@@ -49,7 +45,7 @@ function toInfo(fullGameList) {
   });
 }
 
-function addGame(game) {
+function addGame(game , callback) {
   game.players = [];
   game.spectators = [];
   game.history = [];
@@ -57,14 +53,51 @@ function addGame(game) {
   game.winnerId = null;
   game.winningCards = null;
   game.isStarted = false;
-  game.deck = getDeck();
+  game.deck = {black: [], white: []};
   game.currentBlackCard = "";
   game.isReadyForScoring = false;
   game.isReadyForReview = false;
   game.pointsToWin = 5;
   game.roundCounter = 0;
   gameList.push(game);
-  return game;
+  WhiteCard.find({}, function(err, data) {
+          if (err) {
+            console.log(err);
+            return next(err);
+          }
+          game.deck.white = data;
+          if( game.deck.black.length > 0){
+            callback(game);  
+          }  
+  });
+  BlackCard.find({}, function(err, data) {
+          if (err) {
+            console.log(err);
+            return next(err);
+          }
+          game.deck.black = data;
+          if( game.deck.white.length > 0){
+            callback(game);  
+          }  
+  });
+  var callbackBlackFn = function(game, callback){
+      console.log('AAA');
+      return function(err, data){
+          if (err){
+              console.log('error occured');
+              return;
+          }
+          console.log('AAA1');
+          console.log(data);
+          game.deck.black = data;
+          console.log(game.deck.white.length);
+          if( game.deck.white.length > 0){
+            console.log('AAA2');
+            callback(game);  
+          }
+      }
+  }
+  BlackCard.find({}, 'question pick draw', callbackBlackFn(game, callback));
 }
 
 function getGame(gameId) {
@@ -190,10 +223,10 @@ function drawWhiteCard(game, player) {
 }
 
 function setCurrentBlackCard(game) {
-  var index =  0;//Math.floor(Math.random() * game.deck.black.length);
-  game.currentBlackCard = (game.deck.black[index].q !== undefined) ? game.deck.black[index].q : game.deck.black[index];
+  var index =  Math.floor(Math.random() * game.deck.black.length);
+  game.currentBlackCard = (game.deck.black[index].question !== undefined) ? game.deck.black[index].question : game.deck.black[index];
   game.currentBlackCardDraw = (game.deck.black[index].draw !== undefined) ? game.deck.black[index].draw : 1;
-  game.currentBlackCardPick = Math.max(game.currentBlackCard.split("__________").length - 1, 1) ;
+  game.currentBlackCardPick = (game.deck.black[index].pick !== undefined) ? game.deck.black[index].pick : 1;
   game.deck.black.splice(index, 1);
 }
 
@@ -267,4 +300,3 @@ exports.roundEnded = roundEnded;
 exports.selectCard = selectCard;
 exports.selectWinner = selectWinner;
 exports.removeFromArray = removeFromArray;
-exports.getDeck = getDeck;
